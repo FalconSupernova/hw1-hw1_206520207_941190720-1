@@ -13,6 +13,7 @@ from sklearn.metrics import log_loss
 from sklearn.linear_model import LogisticRegression
 import pandas as pd
 import scipy.stats as stats
+import statistics
 from clean_data import NSD
 
 
@@ -27,10 +28,15 @@ def pred_log(logreg, X_train, y_train, X_test, flag=False):
     :return: A two elements tuple containing the predictions and the weighted matrix
     """
     # ------------------ IMPLEMENT YOUR CODE HERE:-----------------------------
-
-    # -------------------------------------------------------------------------
+    logreg.fit(X_train,y_train)
+    if flag==True:
+        y_pred_log = logreg.predict_proba(X_test)
+    else:
+        y_pred_log=logreg.predict(X_test)
+        w_log=logreg.coef_
     return y_pred_log, w_log
-
+    # -------------------------------------------------------------------------
+    
 
 def w_no_p_table(w, features):
     x = np.arange(len(features))
@@ -92,8 +98,16 @@ def cv_kfold(X, y, C, penalty, K, mode):
             for train_idx, val_idx in kf.split(X, y):  # val=validation
                 x_train, x_val = X.iloc[train_idx], X.iloc[val_idx]
         # ------------------ IMPLEMENT YOUR CODE HERE:-----------------------------
-
+        y_train, y_val = y[train_idx], y[val_idx]
+        x_train_fold = scaler.fit_transform(x_train,mode=mode,flag=False)
+        x_val_fold = scaler.transform(x_val,mode=mode,flag=False)
+        logreg.fit(x_train_fold, y_train)
+        y_pred_val = logreg.predict_proba(x_val_fold)
+        loss_val_vec[k] = log_loss(y_val, y_pred_val)
+        k+=1
+        validation_list+= [{'C':c, 'penalty':p, 'mu':np.mean(loss_val_vec), 'sigma':np.std(loss_val_vec)}]
         # --------------------------------------------------------------------------
+
     return validation_list
 
 
@@ -107,7 +121,18 @@ def odds_ratio(w, X, selected_feat='LB'):
              odds_ratio: the odds ratio of the selected feature and label
     """
     # ------------------ IMPLEMENT YOUR CODE HERE:-----------------------------
+    columns = X.columns
+    i = columns.get_loc(selected_feat)
+    odd_ratio = np.exp(w[0][i])
 
+    odds_list = []
+    for j in range(0,len(X)):
+        value = 0
+        for i in range(0, len(X.columns)):
+            value += X.iloc[j][i]*w[0][i]
+        odds_list.append(value)
+    
+    odds = np.exp(statistics.median(odds_list))
     # --------------------------------------------------------------------------
-
+    
     return odds, odd_ratio
